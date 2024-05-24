@@ -16,7 +16,12 @@ public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+
     private Long id;
+
+    /**
+     * 普通员工 regular, 组长 group Leader, 经理Manager, 主管Director 总裁 President
+     */
     private String name;
 
 

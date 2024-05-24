@@ -2,6 +2,7 @@ package net.javaspring.ems.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import net.javaspring.ems.utils.AuditType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +27,19 @@ public class Audit {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** 用户ID */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id")
+    private Long userId;
+
+    /** 审配类型 */
+    @Column(name = "audit_type", nullable = false)
+    private AuditType auditType;
+
+    /** 审批方式 （Any 只需一人允许， All 所有人都要同意） */
+    @Column(name = "is_any_approval_allowed", nullable = false)
+    private boolean isAnyApprovalAllowed;
+
     /** 审批标题 */
     @Column(name = "title", nullable = false, length = 50)
     private String title;
@@ -46,7 +60,7 @@ public class Audit {
     @Column(name = "num_approval_requests", nullable = false)
     private Integer numOfApprovalRequests;
 
-    /** 审批状态 0代表审批中 1代表审批成功 2代表审批失败 */
+    /** 审批状态 0代表草稿 1代表审批中 2代表审批成功 3代表审批失败 */
     @Column(name = "status", columnDefinition = "TINYINT(4)")
     private Integer status;
 
@@ -57,5 +71,7 @@ public class Audit {
     /** 审批结束上传时间 */
     @Column(name = "update_time")
     private LocalDateTime updateTime;
+
+
 
 }

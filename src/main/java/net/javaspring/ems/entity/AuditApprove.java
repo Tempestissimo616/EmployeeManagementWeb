@@ -33,4 +33,10 @@ public class AuditApprove {
 
     @Column(name = "approval_time", nullable = false)
     private LocalDateTime approvalTime;
+
+    @Column(name = "audit_level_order")
+    private int auditLevelOrder;
+
+    @Column(name = "is_last_level")
+    private boolean isLastLevel;
 }
