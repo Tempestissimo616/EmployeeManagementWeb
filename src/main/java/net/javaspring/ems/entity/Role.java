@@ -22,6 +22,7 @@ public class Role {
     /**
      * 普通员工 regular, 组长 group Leader, 经理Manager, 主管Director 总裁 President
      */
+    @Column(name = "name", nullable = false)
     private String name;
 
 

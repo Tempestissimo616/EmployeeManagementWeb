@@ -2,18 +2,16 @@ package net.javaspring.ems.controller;
 
 import lombok.AllArgsConstructor;
 import net.javaspring.ems.dto.RoleDto;
+import net.javaspring.ems.dto.UserRoleDto;
 import net.javaspring.ems.service.RoleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin
+@CrossOrigin("*")
 @AllArgsConstructor
 @RestController
 @RequestMapping("/api/role")
@@ -23,14 +21,23 @@ public class RoleController {
 
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PostMapping
-    public ResponseEntity<RoleDto> createRole(RoleDto roleDto){
+    public ResponseEntity<RoleDto> createRole(@RequestBody RoleDto roleDto){
         RoleDto role = roleService.createRole(roleDto);
         return new ResponseEntity<>(role, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @GetMapping
     public ResponseEntity<List<RoleDto>> getAllRoles(){
         List<RoleDto> roleList = roleService.getAllRoles();
         return new ResponseEntity<>(roleList, HttpStatus.OK);
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PostMapping("/setRole")
+    public ResponseEntity<UserRoleDto> setUserRole(@RequestBody UserRoleDto userRoleDto){
+        UserRoleDto userRole = roleService.setUserRole(userRoleDto);
+        return new ResponseEntity<>(userRole, HttpStatus.OK);
     }
 
 }

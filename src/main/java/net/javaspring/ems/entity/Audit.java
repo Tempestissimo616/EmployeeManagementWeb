@@ -28,9 +28,9 @@ public class Audit {
     private Long id;
 
     /** 用户ID */
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private Long userId;
+    private User user;
 
     /** 审配类型 */
     @Column(name = "audit_type", nullable = false)
