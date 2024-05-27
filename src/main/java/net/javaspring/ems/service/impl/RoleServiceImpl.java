@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
-public class RoleServiceImpl implements RoleService {
+public class    RoleServiceImpl implements RoleService {
 
     RoleRepository roleRepository;
     UserRepository userRepository;

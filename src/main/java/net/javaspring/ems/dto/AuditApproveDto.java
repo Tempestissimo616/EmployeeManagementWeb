@@ -12,5 +12,8 @@ import lombok.Setter;
 public class AuditApproveDto {
     private Long userId;
     private Long auditId;
-    private Boolean approved;
+    private String approvedStatus;
+    private String approved;
+    private Integer auditLevelOrder;
+    private boolean isLastLevel;
 }

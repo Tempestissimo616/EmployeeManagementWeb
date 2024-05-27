@@ -36,9 +36,17 @@ public class Audit {
     @Column(name = "audit_type", nullable = false)
     private AuditType auditType;
 
-    /** 审批方式 （Any 只需一人允许， All 所有人都要同意） */
-    @Column(name = "is_any_approval_allowed", nullable = false)
-    private boolean isAnyApprovalAllowed;
+    /** 审批方式 （True: Any 只需一人允许, False: All 所有人都要同意） */
+    @Column(name = "require_all_approval_passing", nullable = false)
+    private boolean requireAllApprovalPassing;
+
+    /** 同级是否需要审批 */
+    @Column(name = "require_peer_review")
+    private boolean requirePeerReview;
+
+    /** 是否允许越级审批 */
+    @Column(name = "is_allowed_to_leapfrog")
+    private boolean isAllowedToLeapfrog;
 
     /** 审批标题 */
     @Column(name = "title", nullable = false, length = 50)
@@ -57,10 +65,7 @@ public class Audit {
     @OneToMany(mappedBy = "audit", cascade = {CascadeType.PERSIST,CascadeType.MERGE,CascadeType.REFRESH}, fetch = FetchType.EAGER)
     private List<AuditApprove> approvals;
 
-    @Column(name = "num_approval_requests", nullable = false)
-    private Integer numOfApprovalRequests;
-
-    /** 审批状态 0代表草稿 1代表审批中 2代表审批成功 3代表审批失败 */
+    /** 审批状态 0代表自批 1代表审批中 2代表审批成功 3代表审批失败 */
     @Column(name = "status", columnDefinition = "TINYINT(4)")
     private Integer status;
 
@@ -68,7 +73,7 @@ public class Audit {
     @Column(name = "create_time")
     private LocalDateTime createTime;
 
-    /** 审批结束上传时间 */
+    /** 审批更新上传时间 */
     @Column(name = "update_time")
     private LocalDateTime updateTime;
 

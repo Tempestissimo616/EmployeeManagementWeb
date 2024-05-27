@@ -14,13 +14,15 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AuditDto {
-    private Long id;
+    private Long userId;
+    private Integer auditType;
+    private boolean requireAllApprovalPassing;
+    private boolean requirePeerReview;
     private String title;
     private String content;
     private Long amountMoney;
-    private Integer numOfApprovalRequests;
-    private Integer status;
+    private int status;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
-    /* private List<AuditApprove> approvals; */
+    private List<AuditApproveDto> approvals;
 }

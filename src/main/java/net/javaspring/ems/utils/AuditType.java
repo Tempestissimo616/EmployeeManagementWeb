@@ -1,29 +1,62 @@
 package net.javaspring.ems.utils;
 
-/**
- * 审批类型
- *
- * 命名以 ** 如 11 *** 如 111. 个位数表示审批等级（数字1为最低等级） 其余数字为审批类型
- *
- * 1x : 请假审批
- * 2x : 项目审批
- * 3x : 资金审批
- */
+import java.util.HashMap;
+import java.util.Map;
+
 public enum AuditType {
-    LEAVING_FORM_LESS_THAN_3_DAYS(12),
-    LEAVING_FORM_LESS_THAN_7_DAYS(13),
-    LEAVING_FORM_MORE_THAN_7_DAYS(14),
-    BAISC_PROJECT_APPLYING(22),
-    MEDIUM_PROJECT_APPLYING(23);
 
+        LEAVING_FORM_LESS_THAN_3_DAYS( 12),
+        LEAVING_FORM_LESS_THAN_7_DAYS(13),
+        LEAVING_FORM_MORE_THAN_7_DAYS(14),
+        BASIC_PROJECT_APPLYING(15),
+        MEDIUM_PROJECT_APPLYING(16);
 
-    private final int value;
+        private int value;
+        private String type;
+        private int level;
 
-    AuditType(int i) {
-        value = i;
-    }
+        private static final Map<Integer, AuditType> valueMap = new HashMap<>();
+
+        static {
+            for (AuditType auditType : AuditType.values()) {
+                    valueMap.put(auditType.value, auditType);
+            }
+        }
+
+        AuditType(int value) {
+            this.value = value;
+            level = value % 10;
+
+            switch (value / 10) {
+                case 1:
+                    type = "请假审批";
+                    break;
+                case 2:
+                    type = "项目审批";
+                    break;
+                default:
+                    type = "不是正确的类型";
+                    break;
+            }
+        }
 
     public int getValue() {
-        return value;
+            return value;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public static AuditType fromValue(int val) {
+        AuditType auditType = valueMap.get(val);
+        if (auditType == null) {
+            throw new IllegalArgumentException("Invalid value for AuditType: " + val);
+        }
+        return auditType;
     }
 }
