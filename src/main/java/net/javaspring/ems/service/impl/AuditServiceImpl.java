@@ -53,7 +53,7 @@ public class AuditServiceImpl implements AuditService {
     @Override
     public AuditDto createAudit(AuditDto auditDto) {
 
-        User user = userRepository.findById(auditDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id",auditDto.getUserId());
+        User user = userRepository.findById(auditDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id",auditDto.getUserId()));
         Audit audit = modelMapper.map(auditDto,Audit.class);
 
         //确定审批表的类型 去确定需要审批的人
@@ -118,7 +118,7 @@ public class AuditServiceImpl implements AuditService {
     /**
      * 用户批准 批准逻辑
      *
-     * @param auditApproveDto
+     * @param auditApproveDto 用户填用的dto
      * @return 当前审查状态
      */
 
@@ -147,27 +147,61 @@ public class AuditServiceImpl implements AuditService {
 
         AuditApprove newAuditApprove = createAuditApprove(audit,user,auditApproveDto.getAuditLevelOrder(),auditApproveDto.isLastLevel(),auditApproveDto.getApprovedStatus());
         newAuditApprove.setApproved(approved);
+        newAuditApprove.setApprovedStatus("complete");
         newAuditApprove.setApprovalTime(LocalDateTime.now());
-        AuditApprove savedAuditAppro =auditApproveRepository.save(newAuditApprove);
+        auditApproveRepository.save(newAuditApprove);
 
-        //判断目前审批等级是否可到下一级 或者是否审批单已经完成审批
-        //... 这个弄完对节点就行了
-        List<AuditApprove> auditApproveList = auditApproveRepository.findByAuditId(audit.getId());
-        boolean allApproved = auditApproveList.stream().allMatch(appro -> appro.isApproved());
-
-        if(audit.getNumOfApprovalRequests() <= auditApproveList.size() && allApproved){
-            audit.setStatus(1);
-        }else if(audit.getNumOfApprovalRequests() <= auditApproveList.size()){
-            audit.setStatus(2);
+        //当允许跨级审批并且审批人等级高于目标要求时 审批可直接通过
+        if(audit.isAllowedToLeapfrog() && audit.getAuditType().getLevel() < convertAllRolesToMaxNum(user.getRoles())){
+            if(newAuditApprove.getApproved().equals("approved")) {
+                audit.setStatus(2);
+                audit.setApprovals(updateApprovalListStatus(audit.getApprovals(), "cancel"));
+            }
+        }else{
+            //判断目前审批等级是否可到下一级 或者是否审批单已经完成审批
+            checkAuditStatus(audit,newAuditApprove);
         }
 
         audit.setUpdateTime(LocalDateTime.now());
         Audit savedAudit = auditRepository.save(audit);
-
-        return modelMapper.map(savedAudit,AuditDto.class);
+        AuditDto auditDto = modelMapper.map(savedAudit,AuditDto.class);
+        auditDto.setApprovals(convertAuditApproveListToDto(savedAudit.getApprovals()));
+        return auditDto;
     }
 
+    private void checkAuditStatus(Audit audit, AuditApprove newAuditApprove){
+        List<AuditApprove> auditApprovals = audit.getApprovals();
 
+        // 检查是否用户批准的当前层的所有人 都批了refused
+        boolean checkCurLevelAllFalse = auditApprovals.stream()
+                .noneMatch(appro -> appro.getAuditLevelOrder() == newAuditApprove.getAuditLevelOrder() && appro.getApproved().equals("approved"));
+
+        //审批需要所有人通过 当用户拒绝此审批时 和 当前层所有人都拒绝
+        if((audit.isRequireAllApprovalPassing() && newAuditApprove.getApproved().equals("refused")) || (checkCurLevelAllFalse)){
+            audit.setStatus(3);
+            //把waiting和process改成cancel 因为已经完成了
+            auditApprovals = updateApprovalListStatus(auditApprovals, "cancel");
+        } // 审批所有全部通过时 或者 当不需要所有人通过时 最后一层有一人通过时  结束此审批并通过
+        else if(auditApprovals.stream().allMatch(appro -> appro.getApproved().equals("approved"))){
+            audit.setStatus(2);
+        }else if((!audit.isRequireAllApprovalPassing() && newAuditApprove.isLastLevel() && newAuditApprove.getApproved().equals("approved"))){
+            auditApprovals = updateApprovalListStatus(auditApprovals, "cancel");
+        }
+
+        audit.setApprovals(auditApprovals);
+        auditRepository.save(audit);
+    }
+
+    public List<AuditApprove> updateApprovalListStatus(List<AuditApprove> approvals, String status) {
+        return approvals.stream()
+                .map(appro -> {
+                    if (appro.getApprovedStatus().equals("waiting") || appro.getApprovedStatus().equals("process")) {
+                        appro.setApprovedStatus(status);
+                    }
+                    return appro;
+                })
+                .collect(Collectors.toList());
+    }
 
     private boolean checkUserRoleForApprove(User user, Audit audit){
         //必须在审批阶段才能审批
@@ -181,7 +215,7 @@ public class AuditServiceImpl implements AuditService {
         // 审批人最低从哪一级开始审批
         int lowestLevel = audit.isRequirePeerReview() ? applicantLevel : applicantLevel + 1;
 
-        // 审批人的等级不能批准此单子
+        // 审批人的等级是否能批准此单子 审批人是否已经审批过此单子
         boolean userLevelRequirement = audit.isRequirePeerReview() ? userLevel >= applicantLevel : userLevel > applicantLevel;
         boolean repeatedApprove = audit.getApprovals().stream().anyMatch(approval -> approval.getUser().equals(user));
 
@@ -193,11 +227,11 @@ public class AuditServiceImpl implements AuditService {
         if(!audit.isAllowedToLeapfrog() && userLevel != lowestLevel){
             List<AuditApprove> lastLevelApprovals = auditApproveRepository.findAllCurrentLevelApprovals(audit,userLevel - 1);
 
-            //如果审批需要所有人通过，找到有一个waiting说明上一级的审批还没有完毕，说明跳级了
-            //如果审批只需要任意人通过，找不到任何complete，说明跳级了
-            if(audit.isRequireAllApprovalPassing() && lastLevelApprovals.stream().anyMatch(approval -> approval.getApprovedStatus() == "waiting")){
+            //如果审批需要所有人通过，找到上一级中一个waiting说明上一级的审批还没有完毕，说明跳级了
+            if(audit.isRequireAllApprovalPassing() && lastLevelApprovals.stream().anyMatch(approval -> approval.getApprovedStatus().equals("waiting"))){
                 throw new UserPermissionNotAllowedException(user.getId());
-            }else if(!audit.isRequireAllApprovalPassing() && !lastLevelApprovals.stream().anyMatch(approval -> approval.getApprovedStatus() == "complete"){
+            }//如果审批只需要任意人通过，如果找不到上一级任何complete，说明跳级了
+            else if(!audit.isRequireAllApprovalPassing() && lastLevelApprovals.stream().noneMatch(approval -> approval.getApprovedStatus().equals("complete"))){
                 throw new UserPermissionNotAllowedException(user.getId());
             }
         }
@@ -236,7 +270,7 @@ public class AuditServiceImpl implements AuditService {
 
             List<User> curLevelUser = userRepository.findByRoleName(convertNumToRoleName(level));
             for(User curUser : curLevelUser){
-                AuditApprove auditApprove = createAuditApprove(audit,user,level,isLastLevel,status);
+                AuditApprove auditApprove = createAuditApprove(audit,curUser,level,isLastLevel,status);
                 auditApproveList.add(auditApprove);
             }
         }
@@ -305,34 +339,19 @@ public class AuditServiceImpl implements AuditService {
                 case "role_user": break;// 排除user
 
             }
-
-        return max;
-
-
         }
+        return max;
     }
 
     private String convertNumToRoleName(int num){
-        switch (num) {
-            case 1:
-                return "REGULAR";
-                break;
-            case 2:
-                return "GROUP_LEADER";
-                break;
-            case 3:
-                return "MANAGER";
-                break;
-            case 4:
-                return "DIRECTOR";
-                break;
-            case 5:
-                return "PRESIDENT";
-                break;
-            default: throw new ResourceNotFoundException("Role","RoleNum",Long.valueOf(num));
-        }
-
-        return "NOT FOUND ROLE";
+        return switch (num) {
+            case 1 -> "REGULAR";
+            case 2 -> "GROUP_LEADER";
+            case 3 -> "MANAGER";
+            case 4 -> "DIRECTOR";
+            case 5 -> "PRESIDENT";
+            default -> throw new ResourceNotFoundException("Role", "RoleNum", (long) num);
+        };
     }
 
 
