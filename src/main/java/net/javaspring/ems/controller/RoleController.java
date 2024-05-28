@@ -40,4 +40,10 @@ public class RoleController {
         return new ResponseEntity<>(userRole, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @GetMapping("/allUserRole")
+    public ResponseEntity<List<UserRoleDto>> getAllUserAllRole(){
+        return new ResponseEntity<>(roleService.getAllUserAllRole(), HttpStatus.OK);
+    }
+
 }

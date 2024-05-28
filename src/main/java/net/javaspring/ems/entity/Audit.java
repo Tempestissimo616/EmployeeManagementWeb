@@ -41,11 +41,11 @@ public class Audit {
     private boolean requireAllApprovalPassing;
 
     /** 同级是否需要审批 */
-    @Column(name = "require_peer_review")
+    @Column(name = "require_peer_review", nullable = false)
     private boolean requirePeerReview;
 
     /** 是否允许越级审批 */
-    @Column(name = "is_allowed_to_leapfrog")
+    @Column(name = "is_allowed_to_leapfrog", nullable = false)
     private boolean isAllowedToLeapfrog;
 
     /** 审批标题 */

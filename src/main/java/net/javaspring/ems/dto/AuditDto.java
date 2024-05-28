@@ -18,6 +18,7 @@ public class AuditDto {
     private Integer auditType;
     private boolean requireAllApprovalPassing;
     private boolean requirePeerReview;
+    private boolean isAllowedToLeapfrog;
     private String title;
     private String content;
     private Long amountMoney;

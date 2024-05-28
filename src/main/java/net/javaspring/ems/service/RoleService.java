@@ -12,4 +12,6 @@ public interface RoleService {
     List<RoleDto> getAllRoles();
 
     UserRoleDto setUserRole(UserRoleDto userRoleDto);
+
+    List<UserRoleDto> getAllUserAllRole();
 }

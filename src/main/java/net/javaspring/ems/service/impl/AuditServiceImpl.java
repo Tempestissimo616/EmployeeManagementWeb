@@ -54,7 +54,14 @@ public class AuditServiceImpl implements AuditService {
     public AuditDto createAudit(AuditDto auditDto) {
 
         User user = userRepository.findById(auditDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id",auditDto.getUserId()));
-        Audit audit = modelMapper.map(auditDto,Audit.class);
+        Audit audit = new Audit();
+        audit.setAmountMoney(auditDto.getAmountMoney());
+        audit.setTitle(auditDto.getTitle());
+        audit.setContent(auditDto.getContent());
+        audit.setRequireAllApprovalPassing(auditDto.isRequireAllApprovalPassing());
+        audit.setAllowedToLeapfrog(auditDto.isAllowedToLeapfrog());
+        audit.setRequirePeerReview(auditDto.isRequirePeerReview());
+        audit.setUser(user);
 
         //确定审批表的类型 去确定需要审批的人
         AuditType auditType = AuditType.fromValue(auditDto.getAuditType());
@@ -66,9 +73,11 @@ public class AuditServiceImpl implements AuditService {
         audit.setCreateTime(LocalDateTime.now());
         Audit savedAudit = auditRepository.save(audit);
 
-        AuditDto dto = modelMapper.map(savedAudit, AuditDto.class);
-        dto.setApprovals(convertAuditApproveListToDto(savedAudit.getApprovals()));
-        return dto;
+
+        auditDto.setApprovals(convertAuditApproveListToDto(savedAudit.getApprovals()));
+        auditDto.setStatus(audit.getStatus());
+        auditDto.setCreateTime(audit.getCreateTime());
+        return auditDto;
     }
 
     /**
@@ -108,11 +117,7 @@ public class AuditServiceImpl implements AuditService {
     public List<AuditDto> getAllAudit() {
 
         List<Audit> auditList = auditRepository.findAll();
-        return auditList.stream().map(audit -> {
-            AuditDto auditDto = modelMapper.map(audit, AuditDto.class);
-            auditDto.setApprovals(convertAuditApproveListToDto(audit.getApprovals()));
-            return auditDto;
-        }).collect(Collectors.toList());
+        return auditList.stream().map(audit -> convertAuditToAuditDto(audit)).collect(Collectors.toList());
     }
 
     /**
@@ -352,6 +357,26 @@ public class AuditServiceImpl implements AuditService {
             case 5 -> "PRESIDENT";
             default -> throw new ResourceNotFoundException("Role", "RoleNum", (long) num);
         };
+    }
+
+    private AuditDto convertAuditToAuditDto(Audit audit){
+        AuditDto auditDto = new AuditDto();
+
+        // 手动进行属性赋值
+        auditDto.setAuditType(audit.getAuditType().getLevel());
+        auditDto.setApprovals(convertAuditApproveListToDto(audit.getApprovals()));
+        auditDto.setAmountMoney(audit.getAmountMoney());
+        auditDto.setTitle(audit.getTitle());
+        auditDto.setContent(audit.getContent());
+        auditDto.setAllowedToLeapfrog(audit.isAllowedToLeapfrog());
+        auditDto.setRequirePeerReview(audit.isRequirePeerReview());
+        auditDto.setRequireAllApprovalPassing(audit.isRequireAllApprovalPassing());
+        auditDto.setStatus(audit.getStatus());
+        auditDto.setUserId(audit.getId());
+        auditDto.setCreateTime(audit.getCreateTime());
+        auditDto.setUpdateTime(audit.getUpdateTime());
+
+        return auditDto;
     }
 
 

@@ -2,6 +2,7 @@ package net.javaspring.ems.service.impl;
 
 import lombok.AllArgsConstructor;
 import net.javaspring.ems.dto.RoleDto;
+import net.javaspring.ems.dto.UserDto;
 import net.javaspring.ems.dto.UserRoleDto;
 import net.javaspring.ems.entity.Role;
 import net.javaspring.ems.entity.User;
@@ -12,13 +13,14 @@ import net.javaspring.ems.service.RoleService;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
-public class    RoleServiceImpl implements RoleService {
+public class  RoleServiceImpl implements RoleService {
 
     RoleRepository roleRepository;
     UserRepository userRepository;
@@ -46,11 +48,32 @@ public class    RoleServiceImpl implements RoleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "id", role.getId()))).collect(Collectors.toSet());
 
         user.getRoles().addAll(roleList);
+        User savedUser = userRepository.save(user);
         UserRoleDto result = new UserRoleDto();
-        result.setUserId(user.getId());
-        result.setRoles(user.getRoles().stream().map(r -> modelMapper.map(r,RoleDto.class)).collect(Collectors.toSet()));
+        result.setUserId(savedUser.getId());
+        result.setRoles(savedUser.getRoles().stream().map(r -> modelMapper.map(r,RoleDto.class)).collect(Collectors.toSet()));
 
         return result;
+    }
+
+    public List<UserRoleDto> getAllUserAllRole(){
+        List<User> userList = userRepository.findAll();
+
+
+        List<UserRoleDto> userRoleDtoList = new ArrayList<>();
+        for (User user : userList) {
+            UserRoleDto userRoleDto = new UserRoleDto();
+            userRoleDto.setUserId(user.getId());
+
+            Set<RoleDto> roleDtoSet = user.getRoles().stream()
+                    .map(role -> new RoleDto(role.getId(), role.getName()))
+                    .collect(Collectors.toSet());
+
+           userRoleDto.setRoles(roleDtoSet);
+           userRoleDtoList.add(userRoleDto);
+        }
+
+        return userRoleDtoList;
     }
 
 

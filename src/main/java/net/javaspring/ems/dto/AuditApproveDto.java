@@ -12,8 +12,14 @@ import lombok.Setter;
 public class AuditApproveDto {
     private Long userId;
     private Long auditId;
-    private String approvedStatus;
+
+    /**
+     * 默认为"" 说明此人还未批准
+     * approved 审批通过
+     * refused 审批拒绝
+     */
     private String approved;
-    private Integer auditLevelOrder;
+    private int auditLevelOrder;
     private boolean isLastLevel;
+    private String approvedStatus;
 }
