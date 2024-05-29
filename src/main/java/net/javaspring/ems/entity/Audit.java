@@ -45,8 +45,8 @@ public class Audit {
     private boolean requirePeerReview;
 
     /** 是否允许越级审批 */
-    @Column(name = "is_allowed_to_leapfrog", nullable = false)
-    private boolean isAllowedToLeapfrog;
+    @Column(name = "allowed_to_leapfrog", nullable = false)
+    private boolean allowedToLeapfrog;
 
     /** 审批标题 */
     @Column(name = "title", nullable = false, length = 50)

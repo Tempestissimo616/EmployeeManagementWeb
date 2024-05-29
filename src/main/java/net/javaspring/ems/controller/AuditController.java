@@ -19,12 +19,19 @@ public class AuditController {
 
     private AuditService auditService;
 
+    /**
+     * 用户生成审批单
+     *
+     * @param auditDto
+     * @return
+     */
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PostMapping("/create")
     public ResponseEntity<AuditDto> createAudit(@RequestBody AuditDto auditDto){
         AuditDto audit = auditService.createAudit(auditDto);
         return new ResponseEntity<>(audit, HttpStatus.CREATED);
     }
+
 
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @GetMapping({"id"})
@@ -39,6 +46,13 @@ public class AuditController {
         List<AuditDto> auditList = auditService.getAllAudit();
         return new ResponseEntity<>(auditList, HttpStatus.OK);
     }
+
+    /**
+     * 审批人 审批对应的审批单
+     *
+     * @param auditApproveDto
+     * @return
+     */
 
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PostMapping
