@@ -4,12 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.javaspring.ems.dto.AuditApproveDto;
 import net.javaspring.ems.dto.AuditDto;
+import net.javaspring.ems.repository.UserRepository;
 import net.javaspring.ems.security.JwtAuthenticationFilter;
 import net.javaspring.ems.security.JwtTokenProvider;
 import net.javaspring.ems.service.AuditService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,14 +37,7 @@ public class AuditController {
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PostMapping("/create")
     public ResponseEntity<AuditDto> createAudit(@RequestBody AuditDto auditDto, HttpServletRequest request){
-        String token = request.getHeader("Authorization");
-        if(jwtTokenProvider.validateToken(token)){
-            String userName = jwtTokenProvider.getUsername(token);
-            auditDto.getUserId();
-        }
-
-
-        AuditDto audit = auditService.createAudit(auditDto);
+        AuditDto audit = auditService.createAudit(auditDto,getTokenFromRequest(request));
         return new ResponseEntity<>(audit, HttpStatus.CREATED);
     }
 
@@ -71,9 +66,19 @@ public class AuditController {
 
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PostMapping
-    public ResponseEntity<AuditDto> userApproveAudit(@RequestBody AuditApproveDto auditApproveDto){
-        AuditDto audit = auditService.userApproveAudit(auditApproveDto);
+    public ResponseEntity<AuditDto> userApproveAudit(@RequestBody AuditApproveDto auditApproveDto, HttpServletRequest request){
+        AuditDto audit = auditService.userApproveAudit(auditApproveDto, getTokenFromRequest(request));
         return new ResponseEntity<>(audit, HttpStatus.OK);
+    }
+
+    public String getTokenFromRequest(HttpServletRequest request){
+        String bearerToken = request.getHeader("Authorization");
+
+        if(StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")){
+            bearerToken = bearerToken.substring(7, bearerToken.length());
+            return jwtTokenProvider.getUsername(bearerToken);
+        }
+        return null;
     }
 
 }

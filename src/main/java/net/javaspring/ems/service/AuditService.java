@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface AuditService {
 
-    AuditDto createAudit(AuditDto auditDto);
+    AuditDto createAudit(AuditDto auditDto, String username);
 
     AuditDto getAuditById(Long auditId3);
 
@@ -17,5 +17,5 @@ public interface AuditService {
 
     List<AuditApprove> getAllApprovalsById(Long auditId);
 
-    AuditDto userApproveAudit(AuditApproveDto auditApproveDto);
+    AuditDto userApproveAudit(AuditApproveDto auditApproveDto, String username);
 }

@@ -55,18 +55,12 @@ public class AuditServiceImpl implements AuditService {
      */
 
     @Override
-    public AuditDto createAudit(AuditDto auditDto, String token) {
-
-        // 验证Token的有效性
-        if(jwtTokenProvider.validateToken(token)){
-            String username = jwtTokenProvider.getUsername(token);
-            System.out.println("Username from Token: " + username);
-        } else {
-            System.out.println("Invalid Token");
-        }
+    public AuditDto createAudit(AuditDto auditDto, String username) {
 
         //转换dto
-        User user = userRepository.findById(auditDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id",auditDto.getUserId()));
+        User user = userRepository.findByUsernameOrEmail(username,username).orElseThrow(() -> new ResourceNotFoundException("User","id" + username ,auditDto.getUserId()));
+        auditDto.setUserId(user.getId());
+
         Audit audit = new Audit();
         audit.setAmountMoney(auditDto.getAmountMoney());
         audit.setTitle(auditDto.getTitle());
@@ -142,13 +136,13 @@ public class AuditServiceImpl implements AuditService {
      */
 
     @Override
-    public AuditDto userApproveAudit(AuditApproveDto auditApproveDto) {
+    public AuditDto userApproveAudit(AuditApproveDto auditApproveDto, String username) {
 
         //匹配 审批人用户 审批单
         String approved = auditApproveDto.getApproved();
-        User user = userRepository.findById(auditApproveDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id",auditApproveDto.getUserId()));
+        User user = userRepository.findByUsernameOrEmail(username,username).orElseThrow(() -> new ResourceNotFoundException("User","id",auditApproveDto.getUserId()));
         Audit audit = auditRepository.findById(auditApproveDto.getAuditId()).orElseThrow(() -> new ResourceNotFoundException("Audit", "id", auditApproveDto.getAuditId()));
-
+        auditApproveDto.setUserId(user.getId());
         // 先判断能否自己就能通过此审批
         if(audit.getUser() == user){
             //不需要同级审批并且自己等级高于等于审批等级时 和 需要同级审批高于此审批等级时

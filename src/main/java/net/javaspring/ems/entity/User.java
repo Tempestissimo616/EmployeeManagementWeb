@@ -14,7 +14,9 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "users")
+@Table(name = "users", indexes = {
+        @Index(name = "idx_username_unique", columnList = "username", unique = true)
+})
 public class User {
 
     @Id
