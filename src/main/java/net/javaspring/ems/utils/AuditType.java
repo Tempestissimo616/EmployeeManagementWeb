@@ -5,7 +5,9 @@ import java.util.Map;
 
 public enum AuditType {
 
+    //请假小于3天
         LEAVING_FORM_LESS_THAN_3_DAYS( 12),
+
         LEAVING_FORM_LESS_THAN_7_DAYS(13),
         LEAVING_FORM_MORE_THAN_7_DAYS(14),
         BASIC_PROJECT_APPLYING(15),

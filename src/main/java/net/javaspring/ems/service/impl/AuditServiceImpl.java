@@ -1,5 +1,6 @@
 package net.javaspring.ems.service.impl;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import net.javaspring.ems.dto.AuditApproveDto;
@@ -13,6 +14,7 @@ import net.javaspring.ems.exception.UserPermissionNotAllowedException;
 import net.javaspring.ems.repository.AuditApproveRepository;
 import net.javaspring.ems.repository.AuditRepository;
 import net.javaspring.ems.repository.UserRepository;
+import net.javaspring.ems.security.JwtTokenProvider;
 import net.javaspring.ems.service.AuditService;
 import net.javaspring.ems.utils.AuditType;
 import org.modelmapper.ModelMapper;
@@ -40,6 +42,8 @@ public class AuditServiceImpl implements AuditService {
 
     private UserRepository userRepository;
 
+    private JwtTokenProvider jwtTokenProvider;
+
     private ModelMapper modelMapper;
 
 
@@ -51,7 +55,15 @@ public class AuditServiceImpl implements AuditService {
      */
 
     @Override
-    public AuditDto createAudit(AuditDto auditDto) {
+    public AuditDto createAudit(AuditDto auditDto, String token) {
+
+        // 验证Token的有效性
+        if(jwtTokenProvider.validateToken(token)){
+            String username = jwtTokenProvider.getUsername(token);
+            System.out.println("Username from Token: " + username);
+        } else {
+            System.out.println("Invalid Token");
+        }
 
         //转换dto
         User user = userRepository.findById(auditDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User","id",auditDto.getUserId()));
@@ -170,7 +182,7 @@ public class AuditServiceImpl implements AuditService {
 
 
 
-        //当允许跨级审批并且审批人等级高于目标要求时 审批可直接通过
+        //特殊情况 当允许跨级审批并且审批人等级高于目标要求时 审批可直接通过
         if(savedAudit.isAllowedToLeapfrog() && savedAudit.getAuditType().getLevel() < convertAllRolesToMaxNum(user.getRoles())){
             if(newAuditApprove.getApproved().equals("approved")) {
                 savedAudit.setStatus(2);
@@ -185,6 +197,13 @@ public class AuditServiceImpl implements AuditService {
         return convertAuditToAuditDto(auditRepository.save(savedAudit));
     }
 
+    /**
+     * 判断现在审批进入了第几个等级阶段 或者是否最终审批通过或拒绝
+     *
+     * @param audit
+     * @param newAuditApprove
+     * @return
+     */
     private Audit checkAuditStatus(Audit audit, AuditApprove newAuditApprove){
         List<AuditApprove> auditApprovals = audit.getApprovals();
 
@@ -193,6 +212,7 @@ public class AuditServiceImpl implements AuditService {
                 .filter(appro -> appro.getAuditLevelOrder() == newAuditApprove.getAuditLevelOrder())
                 .allMatch(appro -> appro.getApproved().equals("refused"));
 
+        // 检查是否所有人通过
         boolean checkCurLevelAllTrue = auditApprovals.stream()
                 .filter(appro -> appro.getAuditLevelOrder() == newAuditApprove.getAuditLevelOrder())
                 .allMatch(appro -> appro.getApproved().equals("approved"));
@@ -208,7 +228,7 @@ public class AuditServiceImpl implements AuditService {
         }else if((!audit.isRequireAllApprovalPassing() && newAuditApprove.isLastLevel() && newAuditApprove.getApproved().equals("approved"))){
             auditApprovals = updateApprovalListStatus(auditApprovals, "cancel");
             audit.setStatus(2);
-        } // 只需任意人通过时， 如果此批准人同意，cancel所有其他同等级的人
+        } // 每层等级中 只需任意人通过时， 如果此批准人同意，cancel所有其他同等级的人
         else if(!audit.isRequireAllApprovalPassing() && newAuditApprove.getApproved().equals("approved")){
             auditApprovals = auditApprovals.stream()
                     .peek(appro -> {
@@ -251,16 +271,23 @@ public class AuditServiceImpl implements AuditService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 判断审批人是否能够审批对应的审批单
+     *
+     * @param user
+     * @param audit
+     * @return
+     */
     private boolean checkUserRoleForApprove(User user, Audit audit){
         //必须在审批阶段才能审批
         if(audit.getStatus() != 1){
             throw new UserPermissionNotAllowedException((long)0, user.getId());
         }
 
-        //审批人
+        //审批人等级
         int userLevel = convertAllRolesToMaxNum(user.getRoles());
         int applicantLevel =  convertAllRolesToMaxNum(audit.getUser().getRoles());
-        // 审批人最低从哪一级开始审批
+        // 审批人最低从哪一级开始审批（跳过低于审批人等级）
         int lowestLevel = audit.isRequirePeerReview() ? applicantLevel : applicantLevel + 1;
 
         // 审批人的等级是否能批准此单子 审批人是否已经审批过此单子
@@ -283,11 +310,6 @@ public class AuditServiceImpl implements AuditService {
                 throw new UserPermissionNotAllowedException((long)4, user.getId());
             }
         }
-
-
-        //boolean isAdmin = user.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_ADMIN") );
-        //boolean isUser = user.getRoles().stream().anyMatch(role -> role.getName().equals("ROLE_USER") );
-
 
         return true;
     }

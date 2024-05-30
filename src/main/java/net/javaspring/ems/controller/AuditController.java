@@ -1,8 +1,11 @@
 package net.javaspring.ems.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import net.javaspring.ems.dto.AuditApproveDto;
 import net.javaspring.ems.dto.AuditDto;
+import net.javaspring.ems.security.JwtAuthenticationFilter;
+import net.javaspring.ems.security.JwtTokenProvider;
 import net.javaspring.ems.service.AuditService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +22,10 @@ public class AuditController {
 
     private AuditService auditService;
 
+    private JwtTokenProvider jwtTokenProvider;
+
+
+
     /**
      * 用户生成审批单
      *
@@ -27,7 +34,14 @@ public class AuditController {
      */
     @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @PostMapping("/create")
-    public ResponseEntity<AuditDto> createAudit(@RequestBody AuditDto auditDto){
+    public ResponseEntity<AuditDto> createAudit(@RequestBody AuditDto auditDto, HttpServletRequest request){
+        String token = request.getHeader("Authorization");
+        if(jwtTokenProvider.validateToken(token)){
+            String userName = jwtTokenProvider.getUsername(token);
+            auditDto.getUserId();
+        }
+
+
         AuditDto audit = auditService.createAudit(auditDto);
         return new ResponseEntity<>(audit, HttpStatus.CREATED);
     }
@@ -37,6 +51,7 @@ public class AuditController {
     @GetMapping({"id"})
     public ResponseEntity<AuditDto> getAuditById(@PathVariable Long auditId){
         AuditDto audit = auditService.getAuditById(auditId);
+
         return new ResponseEntity<>(audit, HttpStatus.OK);
     }
 
